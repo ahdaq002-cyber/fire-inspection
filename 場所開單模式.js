@@ -4,7 +4,7 @@
   const $=id=>document.getElementById(id), key='fire-inspection-places-v1';
   let db={version:1,active:null,places:[]}, timer, fade, restoring=false, storageBlocked=false;
   const style=document.createElement('style');
-  style.textContent=`#save-toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#15352f;color:white;padding:12px 20px;border-radius:12px;box-shadow:0 4px 20px #0003;max-width:95vw}#place-list{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.place-active{background:#176854!important;color:white!important}.equipment-panel{margin:14px 0;border:1px solid #d5e2d9;border-radius:12px;padding:12px}.equipment-panel summary{cursor:pointer;font-weight:800;padding:8px}.equipment-panel .inspection{border:0;padding:8px}.actual-defect{display:none;width:100%;padding:9px;margin-top:9px}.issue-row:has(input:checked) .actual-defect{display:block}#place-name{padding:11px;width:min(100%,430px);border:1px solid #adcabc;border-radius:10px}#place-manager .toolbar{margin-top:10px}`;
+  style.textContent=`#save-toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#15352f;color:white;padding:12px 20px;border-radius:12px;box-shadow:0 4px 20px #0003;max-width:95vw}#place-list{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.place-active{background:#176854!important;color:white!important}.equipment-panel{margin:14px 0;border:1px solid #d5e2d9;border-radius:12px;padding:12px}.equipment-panel summary{cursor:pointer;font-weight:800;padding:8px}.equipment-panel .inspection{border:0;padding:8px}.actual-defect,.actual-fact{display:none;width:100%;padding:9px;margin-top:9px;border:1px solid #b8cec0;border-radius:8px;background:white}.issue-row:has(input:checked) .actual-defect,.issue-row:has(input:checked) .actual-fact{display:block}#place-name{padding:11px;width:min(100%,430px);border:1px solid #adcabc;border-radius:10px}#place-manager .toolbar{margin-top:10px}`;
   document.head.append(style);
   const toast=document.createElement('div');toast.id='save-toast';toast.className='hidden';toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');document.body.prepend(toast);
   const manager=document.createElement('section');manager.id='place-manager';manager.className='card';
@@ -46,15 +46,14 @@
           body.querySelector('.issue-grid').append(temp.querySelector('.issue-row'));
         }
       }panel.append(body);
-      body.querySelectorAll('.issue-row').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(row.querySelector('[data-fact-required]'))return;if(!cb||cb.dataset.issue==='pass')return;const fact=row.querySelector('.foam-fact')||row.querySelector('.detail');if(fact){fact.placeholder='必填現場紀錄：例如 B棟17樓、2只、測試結果';fact.setAttribute('aria-label','現場紀錄');}
-        const label=row.querySelector('.issue-label')?.textContent||'';
-        if(fact&&cb.dataset.issue!=='manual'&&!(['標示','照明','緊急發電機'].includes(name)&&['85','93','102','107','110','113'].includes(p.year)))fact.placeholder='選填：缺失點，例如 B棟17樓';
+      body.querySelectorAll('.issue-row').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(!cb||cb.dataset.issue==='pass')return;const fact=row.querySelector('.foam-fact')||row.querySelector('.detail');if(fact&&!fact.matches('[data-fact-required]')){fact.placeholder='選填：缺失點，例如 B棟17樓';fact.setAttribute('aria-label','缺失點（選填）');}
         if(cb.dataset.groupArticle||cb.dataset.issue==='other'||cb.dataset.issue==='manual'){const input=document.createElement('input');input.className='actual-defect';input.placeholder='必填：本次實際缺失';input.setAttribute('aria-label','本次實際缺失');input.maxLength=350;row.append(input);}
       });
       let saved=p.forms[name];
       if(Array.isArray(saved)&&changedPanels.has(name)){p.legacyForms??={};p.legacyForms[name]=saved;delete p.forms[name];saved=null;}
       if(Array.isArray(saved))controls(panel).forEach((el,i)=>{if(!saved[i])return;el.value=saved[i].value;if(el.type==='checkbox')el.checked=!!saved[i].checked;});
       else if(saved)controls(panel).forEach(el=>{const value=saved[fieldKey(el)];if(!value)return;el.value=value.value;if(el.type==='checkbox')el.checked=!!value.checked;});
+       if(saved&&!Array.isArray(saved)&&!renderers[name])body.querySelectorAll('.issue-row').forEach(row=>{const actual=row.querySelector('.actual-fact'),location=row.querySelector('.detail');if(actual&&location&&!actual.value&&location.value){actual.value=location.value;location.value='';}});
       if(p.legacyForms?.[name]){const notice=document.createElement('details');notice.className='followup-field';const old=p.legacyForms[name],labels=legacyLabels(name,p.year);notice.innerHTML='<summary>舊版合併選項紀錄（請核對後重新勾選）</summary><p class="note">舊版資料仍保存在本機。為避免將合併項錯套到拆分後的單項，本區不自動產生違規事實。</p>';const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';let rowIndex=-1;pre.textContent=old.map((entry,i)=>{if(typeof entry.checked==='boolean'){rowIndex++;return entry.checked?'已勾選：'+(labels[rowIndex]||'舊版第'+(rowIndex+1)+'項'):'';}return entry.value&&entry.value.trim()?`原紀錄欄位 ${i+1}：${entry.value}`:'';}).filter(Boolean).join('\n')||'無已勾選項或文字';notice.append(pre);body.prepend(notice);}
       panel.addEventListener('toggle',()=>{if(panel.open)document.querySelectorAll('.equipment-panel').forEach(other=>{if(other!==panel)other.open=false;});});$('inspections').append(panel);
     });counts();$('issues-section').classList.toggle('hidden',!p.equipment.length);invalidate();
@@ -75,10 +74,11 @@
   window.addEventListener('storage',event=>{if(event.key===key){storageBlocked=true;clearTimeout(timer);status('⚠ 另一分頁已變更資料，請重新整理後繼續。');document.querySelectorAll('main input,main button,main select,main textarea').forEach(e=>e.disabled=true);}});
   window.placeFormatLine=(text,row)=>{
     if(!row)return text;const colon=text.indexOf('：'),name=text.slice(0,colon),detail=(row.querySelector('.foam-fact')||row.querySelector('.detail')).value.trim();
-    if(row.dataset.textOnly)return text;
+    if(row.dataset.textOnly)return text+(detail?'，('+detail+')':'');
     let body=text.slice(colon+1), reference='條號待查核';
     const match=body.match(/，(第\d+(?:-\d+)?條.*)$/)||body.match(/(§\d+(?:-\d+)?.*)$/);if(match){reference=match[1].replace(/第(\d+(?:-\d+)?)條/g,'§$1');body=body.slice(0,match.index);}else if(body.endsWith('（條號待查核）'))body=body.slice(0,-7);
-    body=body.split('（'+detail+'）').join('');
+    if(detail)body=body.split('（'+detail+'）').join('');
+    body=body.replaceAll('（）','').replaceAll('（條號待查核）','').trim();
     const custom=row.querySelector('.actual-defect')?.value.trim();
     if(custom)body=custom;else if(body===detail||!body){const label=row.querySelector('.issue-label span')?.cloneNode(true);label?.querySelectorAll('.article').forEach(e=>e.remove());body=label?.textContent.trim()||'缺失待確認';}
     return name+'：'+body+'('+reference+')'+(detail?'，('+detail+')':'');

@@ -954,7 +954,7 @@
         const fallback=renderUnverified(name);
         return historicalNotices[name]?fallback.replace('尚未逐項核對此設備的歷史條文與函釋，暫不提供自動條號。',historicalNotices[name]):fallback;
       }
-      const rows=[['pass','抽查符合','',''],...items].map(([id,label,article,note,fact])=>`<div class="issue-row"${!article&&id!=='pass'?' data-text-only="1"':''}><label class="issue-label"><input type="checkbox" data-issue="${id}"><span>${label}${article?' <span class="article">§'+article+'</span>':''}</span></label><p class="note">${note}</p><input class="detail" type="text" maxlength="350" aria-label="現場紀錄" ${fact?'data-fact-required="1"':''} placeholder="${fact?'必填：'+fact:'選填：缺失點'}"></div>`).join('');
+       const rows=[['pass','抽查符合','',''],...items].map(([id,label,article,note,fact])=>`<div class="issue-row"${!article&&id!=='pass'?' data-text-only="1"':''}><label class="issue-label"><input type="checkbox" data-issue="${id}"><span>${label}${article?' <span class="article">§'+article+'</span>':''}</span></label><p class="note">${note}</p><input class="detail" type="text" maxlength="350" aria-label="缺失點（選填）" placeholder="選填：缺失點，例如 B棟17樓">${fact?`<input class="actual-fact" type="text" maxlength="350" aria-label="必填具體事實" placeholder="必填：${fact}">`:''}</div>`).join('');
       return `<article class="inspection" data-equipment="${escapeHtml(name)}"><h3>${escapeHtml(name)}（${year}年版）</h3><div class="issue-grid">${rows}</div></article>`;
     }
     function renderUnverified(name){return `<article class="inspection unverified" data-equipment="${escapeHtml(name)}"><h3>${escapeHtml(name)}</h3><p>尚未逐項核對此設備的歷史條文與函釋，暫不提供自動條號。</p><div class="issue-grid"><div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="manual"><span>待人工查核的缺失</span></label><input class="detail" type="text" maxlength="180" aria-label="${escapeHtml(name)}的具體缺失" placeholder="填寫實際缺失（必填）"></div></div></article>`;}
@@ -980,20 +980,21 @@
           if(row.querySelector('.actual-defect')&&!row.querySelector('.actual-defect').value.trim()){markIncomplete(row,`${name}：請寫明實際缺失。`);return;}
           if(confirmedEquipmentIssues[name]&&issueId!=='manual'){
             const issue=historicalIssues(name,year).find(i=>i[0]===issueId);
-            if(!issue||issue[4]&&!detail){markIncomplete(row,name+'：請填寫'+(issue?.[4]||'缺失'));return;}
-            lines.push(name+'：'+issue[1]+(detail?'（'+detail+'）':'')+(issue[2]?'，第'+issue[2]+'條':''));
+             const actualFact=row.querySelector('.actual-fact')?.value.trim();
+             if(!issue||issue[4]&&!actualFact){markIncomplete(row,name+'：請填寫'+(issue?.[4]||'具體事實'));return;}
+             lines.push(name+'：'+issue[1]+(actualFact?'（'+actualFact+'）':'')+(issue[2]?'，第'+issue[2]+'條':''));
             return;
           }
           if(name==='緊急發電機'&&['85','93','102','107','110','113'].includes(year)){
             const issue=generatorIssues(year).find(i=>i.id===issueId);
-            if(!issue||!detail){markIncomplete(row,'緊急發電機：請填寫現場事實及測試結果。');return;}
+             if(!issue){markIncomplete(row,'緊急發電機：請重新選擇缺失。');return;}
             lines.push(name+'：'+issue.label+'（'+detail+'），第'+issue.article+'條'+(issue.clause||''));
             review.push(issue.note);
             return;
           }
           if(['標示設備','緊急照明設備'].includes(name)&&modernLampYears.includes(year)){
             const issue=lampIssues(year,name==='緊急照明設備').find(i=>i.id===issueId);
-            if(!detail||(!issue&&issueId!=='other')){markIncomplete(row,name+'：請填寫現場事實並確認缺失。');return;}
+             if(!issue&&issueId!=='other'){markIncomplete(row,name+'：請重新選擇缺失。');return;}
             const article=row.querySelector('.lamp-article')?.value||issue?.article;
             if(issue?.articles&&!issue.articles.includes(article)){markIncomplete(row,name+'：請選擇實際引用條號。');return;}
             lines.push(name+'：'+(issue?.label||'其他缺失')+'（'+detail+'）'+(article?'，第'+article+'條'+(issue?.clause||''):'（條號待查核）'));
@@ -1006,7 +1007,7 @@
             if(!issue&&issueId!=='other'){markIncomplete(row,'標示設備：請重新選擇缺失。');return;}
             const index=row.querySelector('.fire-alarm-variant')?.value;
             const variant=index===undefined||index===''?null:issue?.variants?.[Number(index)];
-            if(!detail||(issue?.variants&&!variant)){markIncomplete(row,'標示設備：請選擇實際缺失並填寫現場事實。');return;}
+             if(issue?.variants&&!variant){markIncomplete(row,'標示設備：請選擇實際缺失。');return;}
             lines.push('標示設備：'+(variant||issue?.label||'其他缺失')+'（'+detail+'）'+(issue?'，第'+issue.article+'條'+issue.clause:'（條號待查核）'));
             if(issue?.note)review.push(issue.note);
             if(!issue)review.push('其他標示缺失須另核法源。');
@@ -1017,7 +1018,7 @@
             if(!issue&&issueId!=='other'){markIncomplete(row,'緊急照明設備：請重新選擇缺失。');return;}
             const index=row.querySelector('.fire-alarm-variant')?.value;
             const variant=index===undefined||index===''?null:issue?.variants?.[Number(index)];
-            if(!detail||(issue?.variants&&!variant)){markIncomplete(row,'緊急照明設備：請選擇實際缺失並填寫現場事實。');return;}
+             if(issue?.variants&&!variant){markIncomplete(row,'緊急照明設備：請選擇實際缺失。');return;}
             lines.push('緊急照明設備：'+(variant||issue?.label||'其他缺失')+'（'+detail+'）'+(issue?'，第'+issue.article+'條'+issue.clause:'（條號待查核）'));
             if(issue?.note)review.push(issue.note);
             if(!issue)review.push('其他緊急照明缺失須另核法源。');
@@ -1026,7 +1027,7 @@
           if(name==='梯間排煙'&&['85','93','102','107','110','113'].includes(year)){
             const issue=(year==='85'?smokeStair85Issues:smokeStairModernIssues(year)).find(item=>item.id===issueId);
             if(!issue&&issueId!=='other'){markIncomplete(row,'梯間排煙：缺失項目未識別，請重新選取。');return;}
-            if(!detail){markIncomplete(row,`梯間排煙：${issue?.label||'其他缺失'}請填寫樓層、位置及具體事實。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,'梯間排煙：請填寫其他缺失內容。');return;}
             if(issueId==='other'){lines.push(`梯間排煙設備：${detail}（條號待查核）`);review.push('梯間排煙：其他缺失須另核法源。');return;}
             const variantIndex=input.dataset.variantIndex??row.querySelector('.fire-alarm-variant')?.value;
             const variant=issue.variants?.[Number(variantIndex)];
@@ -1039,7 +1040,7 @@
           if(name==='排煙'&&['85','93','102','107','110','113'].includes(year)){
             const issue=smokeIndoorIssues(year).find(item=>item.id===issueId);
             if(!issue&&issueId!=='other'){markIncomplete(row,'室內排煙：缺失項目未識別，請重新選取。');return;}
-            if(!detail){markIncomplete(row,`室內排煙：${issue?.label||'其他缺失'}請填寫樓層、位置及具體事實。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,'室內排煙：請填寫其他缺失內容。');return;}
             if(issueId==='other'){lines.push(`室內排煙設備：${detail}（條號待查核）`);review.push('室內排煙：其他缺失須另核法源。');return;}
             const variantIndex=input.dataset.variantIndex??row.querySelector('.fire-alarm-variant')?.value;
             const variant=issue.variants?.[Number(variantIndex)];
@@ -1052,7 +1053,7 @@
           if(name==='排煙'&&year==='78'){
             const issue=smoke78Issues.find(item=>item.id===issueId);
             if(!issue&&issueId!=='other'){markIncomplete(row,'排煙：缺失項目未識別，請重新選取。');return;}
-            if(!detail){markIncomplete(row,`排煙：${issue?.label||'其他缺失'}請填寫樓層、位置及實際查得情形。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,'排煙：請填寫其他缺失內容。');return;}
             if(issueId==='other'){
               lines.push(`排煙：${detail}（條號待查核）`);
               review.push('排煙：其他缺失未預設條號，須另核當時法源、核准圖說及函釋。');return;
@@ -1073,7 +1074,7 @@
             const variantIndex=input.dataset.variantIndex??row.querySelector('.fire-alarm-variant')?.value;
             const variant=variantIndex===''||variantIndex===undefined?undefined:issue?.variants?.[Number(variantIndex)];
              if(issue?.variants&&!variant){markIncomplete(row,`${name}：${issue.article?`第${issue.article}條`:issue.label}請先選擇本次實際缺失類型。`);return;}
-            if(!detail){markIncomplete(row,`${name}：${issue?.article?`第${issue.article}條`:issue?.label||'其他缺失'}請填寫實際缺失與位置。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：請填寫其他缺失內容。`);return;}
             if(issue?.detectorType){
               const state=row.querySelector('[data-detector="state"]').value;
               if(!state){markIncomplete(row,`${name}：${issue.detectorType}請選擇故障、經測試不動作或遭拆除。`);return;}
@@ -1105,7 +1106,7 @@
              const variantIndex=input.dataset.variantIndex??row.querySelector('.fire-alarm-variant')?.value;
              const variant=variantIndex===''||variantIndex===undefined?undefined:issue?.variants?.[Number(variantIndex)];
              if(issue?.variants&&!variant){markIncomplete(row,`${name}：${issue.label}請先選擇本次實際缺失類型。`);return;}
-             if(!detail){markIncomplete(row,`${name}：${issue?.label||'其他缺失'}請填寫樓層、位置與具體事實。`);return;}
+              if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：請填寫其他缺失內容。`);return;}
              const article=evacuationArticle(issue,variantIndex);
              const factLabel=year!=='78'&&issueId==='support'?`${issue.label}：${variant}`:variant||issue?.label;
              lines.push(issueId==='other'?`${name}：${detail}`:`${name}：${factLabel}（${detail}）${article?`，第${article}條`:'（條號待查核）'}`);
@@ -1118,7 +1119,6 @@
             const issue=foamChoices(year).find(item=>item.id===issueId);if(!issue)return;
             const choice=issue.variants?foamVariant(issue,input.dataset.variant):null;
             if(issue.variants&&!choice){markIncomplete(row,`${name}：${issue.label}請選擇實際缺失。`);return;}
-            if(!detail){markIncomplete(row,`${name}：${choice?choice[1]:issue.label}請補填位置、實際缺失或查證結果。`);return;}
             const label=foamChoiceLabel(issue,year,choice);
             const article=foamArticle(issue,year,choice);
             lines.push(`${name}：${label}（${detail}），${foamArticleLabel(issue,year,choice)}`);
@@ -1131,7 +1131,7 @@
             const fact=row.querySelector('.sprinkler-fact').value.trim();
             if(input.dataset.groupArticle){
               const article=input.dataset.groupArticle;
-              if(!fact){markIncomplete(row,`${name}：請寫明第${article}條本次實際查得的缺失，不能將合併選項全部視為已發生。`);return;}
+             if(!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：請寫明第${article}條本次實際查得的缺失，不能將合併選項全部視為已發生。`);return;}
               if(!groupedSprinkler.has(article))groupedSprinkler.set(article,[]);
               lines.push(`${name}：${fact}，${sprinklerReference(article,year)}`);
               const choices=sprinklerGroups(year).get(issueId)||[];
@@ -1143,7 +1143,7 @@
             const issue=sprinklerEntries(year).find(item=>item.id===issueId);
             if(!issue)return;
             const article=issue.article;
-            if((issue.specific||!article)&&!fact){markIncomplete(row,`${name}：${issue.label}請補填具體事實。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：其他缺失請補填具體事實。`);return;}
             const text=issueId==='other'?fact:`${issue.label}${fact?`（${fact}）`:''}`;
             if(article){
               if(!groupedSprinkler.has(article))groupedSprinkler.set(article,[]);
@@ -1156,25 +1156,24 @@
             review.push('自動撒水設備：須核對當版適用條件、得免設規定、相關函釋及核准設計。');
             return;
           }          if(issueId==='manual'){
-            if(!detail){markIncomplete(row,`${name}：請補填具體缺失。`);return;}
+             if(!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：請補填具體缺失。`);return;}
             lines.push(`${name}：${detail}（條號待查核）`);review.push(`${name}：尚未核對設置標準及函釋。`);return;
           }
           if(name==='連結送水管'&&input.dataset.article){
-            if(!detail){markIncomplete(row,`連結送水管：${row.querySelector('.issue-label span').innerText}請補填樓層、位置及實際查得情形。`);return;}
             lines.push(`${name}：${detail}，第${input.dataset.article}條`);
             if(year==='78')systemLines.push(`連結送水管：本項第${input.dataset.article}條依使用者提供的78年機關系統對照；官方具體條款及個案適用仍須確認。`);
             review.push(`連結送水管：須核對${year}年版第${input.dataset.article}條、相關函釋及核准圖說。`);
             return;
           }
           if(input.dataset.groupArticle){
-            if(!detail){markIncomplete(row,`${name}：請寫明 §${input.dataset.groupArticle} 實際查得的缺失，不能將合併選項全部視為已發生。`);return;}
+             if(!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：請寫明 §${input.dataset.groupArticle} 實際查得的缺失，不能將合併選項全部視為已發生。`);return;}
             lines.push(`${name}：${detail}，第${input.dataset.groupArticle}條`);
             review.push(`${name}：§${input.dataset.groupArticle} 合併項須核對具體法源、適用條件或證據。`);
             return;
           }
           if(name==='室外消防栓'){
             const issue=outdoorIssues.find(item=>item.id===issueId);if(!issue)return;
-            if(issueId==='other'&&!detail){markIncomplete(row,`${name}：其他缺失請補填具體事實。`);return;}
+             if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：其他缺失請補填具體事實。`);return;}
             const label=typeof issue.label==='function'?issue.label(year):issue.label;const article=issue.article(year);
             const factText=issueId==='missing'&&year!=='78'&&detail?`未依規定設置（第1、2層樓地板面積合併檢討；${detail}）`:`${label}${detail?`（${detail}）`:''}`;
             lines.push(`${name}：${factText}${article?`，第${article}條`:'（條號待查核）'}`);
@@ -1182,7 +1181,7 @@
             return;
           }
           const issue=(name==='室內消防栓'?hydrantIssues:extinguisherIssues).find(item=>item.id===issueId);if(!issue)return;
-          if(issueId==='other'&&!detail){markIncomplete(row,`${name}：其他缺失請補填具體事實。`);return;}
+           if(issueId==='other'&&!row.querySelector('.actual-defect')?.value.trim()){markIncomplete(row,`${name}：其他缺失請補填具體事實。`);return;}
           if(name==='滅火器'&&year==='78'&&issueId==='other'){
             lines.push(`${name}：${detail}`);
             review.push('滅火器：自行填寫的其他缺失沒有預設設置標準條號，請另行核對法源。');
@@ -1196,7 +1195,6 @@
           const variant=input.dataset.variant||'';
           const variants=name==='室內消防栓'?hydrantVariants(issue,year):issue.variants;
           const issueText=variants?variants.find(item=>item.id===variant).label:issue.output?issue.output(year):typeof issue.label==='function'?issue.label(year):issue.label;
-          if(issue.specific&&!detail){markIncomplete(row,`${name}：${issueText}請寫明實際查得的缺失。`);return;}
           const article=issue.article(year,variant);const facts=detail?`（${detail}）`:'';
           if(name==='室內消防栓'&&article){lines.push(`${name}：${issueText+facts}，第${article}條`);}else{lines.push(`${name}：${name==='滅火器'&&issue.specific&&!issue.noArticleDirect?detail:issueText+facts}${article?name==='滅火器'?`，第${article}條`:`§${article}`:name==='室內消防栓'&&!issue.noArticle?'（條號待查核）':''}`);}
           if(name==='室內消防栓'&&systemArticleFor(year,issueId)){
