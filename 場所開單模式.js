@@ -23,7 +23,7 @@
   function queue(){if(restoring||!active())return;status('⏳ 自動儲存中…');clearTimeout(timer);timer=setTimeout(save,650);}
   function invalidate(){$('result').textContent='';$('result-section').classList.add('hidden');}
   function cards(){const list=$('place-list');list.replaceChildren();db.places.forEach(p=>{const b=document.createElement('button');b.className='secondary'+(p.id===db.active?' place-active':'');b.textContent=(p.name||'未命名場所')+' · '+p.year+'年';b.onclick=()=>{save();db.active=p.id;load();write();};list.append(b);});$('add-place').disabled=db.places.length>=5||storageBlocked;$('delete-place').disabled=!active();}
-  const renderers={'滅火器':renderExtinguisher,'室內栓':renderHydrant,'室外栓':renderOutdoor,'撒水':renderSprinkler,'泡沫':renderFoam,'火自報':renderFireAlarm,'手報':renderManualAlarm,'廣播':renderBroadcast,'避難器具':renderEvacuation,'連結送水管':renderLinkedStandpipe,'排煙':renderSmoke,'標示':renderSignage};
+  const renderers={'滅火器':renderExtinguisher,'室內栓':renderHydrant,'室外栓':renderOutdoor,'撒水':renderSprinkler,'泡沫':renderFoam,'火自報':renderFireAlarm,'手報':renderManualAlarm,'廣播':renderBroadcast,'避難器具':renderEvacuation,'連結送水管':renderLinkedStandpipe,'排煙':renderSmoke,'標示':renderSignage,'照明':renderLighting,'緊急發電機':renderGenerator};
   function legacyLabels(name,year){
     const grouped=(items,article,label)=>{const groups=new Map();items.forEach(item=>{const key=article(item)||'single-'+label(item);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(label(item));});return [...groups.values()].map(labels=>labels.join('、'));};
     if(name==='滅火器')return grouped(extinguisherIssues,i=>i.article?.(year),i=>i.label);
@@ -38,10 +38,17 @@
     return [];
   }
   function render(){const p=active();$('inspections').replaceChildren();if(!p)return;
-    p.equipment.forEach(name=>{const panel=document.createElement('details');panel.className='equipment-panel';panel.dataset.key=name;const summary=document.createElement('summary');summary.textContent=name;panel.append(summary);const body=document.createElement('div');body.innerHTML=renderers[name]?renderers[name](p.year):renderUnverified(name);panel.append(body);
-      body.querySelectorAll('.issue-row').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(!cb||cb.dataset.issue==='pass')return;const fact=row.querySelector('.foam-fact')||row.querySelector('.detail');if(fact){fact.placeholder='必填現場紀錄：例如 B棟17樓、2只、測試結果';fact.setAttribute('aria-label','現場紀錄');}
+    p.equipment.forEach(name=>{const panel=document.createElement('details');panel.className='equipment-panel';panel.dataset.key=name;const summary=document.createElement('summary');summary.textContent=name;panel.append(summary);const body=document.createElement('div');body.innerHTML=renderers[name]?renderers[name](p.year):renderHistoricalEquipment(name,p.year);if(historicalIssues(name,p.year).length&&p.forms[name]){
+        const old=p.forms[name];
+        if(Array.isArray(old)){p.legacyForms??={};p.legacyForms[name]=old;delete p.forms[name];}
+        else if(Object.keys(old).some(k=>k.startsWith('issue:manual|'))){
+          const temp=document.createElement('div');temp.innerHTML=renderUnverified(name);
+          body.querySelector('.issue-grid').append(temp.querySelector('.issue-row'));
+        }
+      }panel.append(body);
+      body.querySelectorAll('.issue-row').forEach(row=>{const cb=row.querySelector('input[type=checkbox]');if(row.querySelector('[data-fact-required]'))return;if(!cb||cb.dataset.issue==='pass')return;const fact=row.querySelector('.foam-fact')||row.querySelector('.detail');if(fact){fact.placeholder='必填現場紀錄：例如 B棟17樓、2只、測試結果';fact.setAttribute('aria-label','現場紀錄');}
         const label=row.querySelector('.issue-label')?.textContent||'';
-        if(fact&&cb.dataset.issue!=='manual')fact.placeholder='選填：缺失點，例如 B棟17樓';
+        if(fact&&cb.dataset.issue!=='manual'&&!(['標示','照明','緊急發電機'].includes(name)&&['85','93','102','107','110','113'].includes(p.year)))fact.placeholder='選填：缺失點，例如 B棟17樓';
         if(cb.dataset.groupArticle||cb.dataset.issue==='other'||cb.dataset.issue==='manual'){const input=document.createElement('input');input.className='actual-defect';input.placeholder='必填：本次實際缺失';input.setAttribute('aria-label','本次實際缺失');input.maxLength=350;row.append(input);}
       });
       let saved=p.forms[name];
@@ -68,14 +75,15 @@
   window.addEventListener('storage',event=>{if(event.key===key){storageBlocked=true;clearTimeout(timer);status('⚠ 另一分頁已變更資料，請重新整理後繼續。');document.querySelectorAll('main input,main button,main select,main textarea').forEach(e=>e.disabled=true);}});
   window.placeFormatLine=(text,row)=>{
     if(!row)return text;const colon=text.indexOf('：'),name=text.slice(0,colon),detail=(row.querySelector('.foam-fact')||row.querySelector('.detail')).value.trim();
+    if(row.dataset.textOnly)return text;
     let body=text.slice(colon+1), reference='條號待查核';
-    const match=body.match(/，(第\d+條.*)$/)||body.match(/(§\d+.*)$/);if(match){reference=match[1].replace(/第(\d+)條/g,'§$1');body=body.slice(0,match.index);}else if(body.endsWith('（條號待查核）'))body=body.slice(0,-7);
+    const match=body.match(/，(第\d+(?:-\d+)?條.*)$/)||body.match(/(§\d+(?:-\d+)?.*)$/);if(match){reference=match[1].replace(/第(\d+(?:-\d+)?)條/g,'§$1');body=body.slice(0,match.index);}else if(body.endsWith('（條號待查核）'))body=body.slice(0,-7);
     body=body.split('（'+detail+'）').join('');
     const custom=row.querySelector('.actual-defect')?.value.trim();
     if(custom)body=custom;else if(body===detail||!body){const label=row.querySelector('.issue-label span')?.cloneNode(true);label?.querySelectorAll('.article').forEach(e=>e.remove());body=label?.textContent.trim()||'缺失待確認';}
     return name+'：'+body+'('+reference+')'+(detail?'，('+detail+')':'');
   };
-  window.placeGroupLines=lines=>{const groups=new Map();lines.forEach(line=>{const i=line.indexOf('：'),name=line.slice(0,i);if(!groups.has(name))groups.set(name,[]);groups.get(name).push(line.slice(i+1));});const numerals=['一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','二十一','二十二','二十三','二十四','二十五','二十六','二十七','二十八'];return [...groups].map(([name,rows],i)=>numerals[i]+'、'+name+'：'+rows.join('\n'+'　'.repeat(name.length+3))).join('\n');};
+  window.placeGroupLines=lines=>{const groups=new Map();lines.forEach(line=>{const i=line.indexOf('：'),name=line.slice(0,i);if(!groups.has(name))groups.set(name,[]);groups.get(name).push(line.slice(i+1));});const digit=['','一','二','三','四','五','六','七','八','九'];const numeral=n=>n<10?digit[n]:n<20?'十'+digit[n%10]:n<100?digit[Math.floor(n/10)]+'十'+digit[n%10]:String(n);return [...groups].map(([name,rows],i)=>numeral(i+1)+'、'+name+'：'+rows.join('\n'+'　'.repeat(name.length+3))).join('\n');};
   try{const raw=localStorage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(parsed.version!==1||!Array.isArray(parsed.places)||parsed.places.length>5||!parsed.places.every(p=>typeof p.id==='string'&&typeof p.name==='string'&&versions.some(v=>v.year===p.year)&&Array.isArray(p.equipment)&&p.equipment.every(n=>equipment.includes(n))&&p.forms&&typeof p.forms==='object'))throw Error('invalid');db=parsed;if(!active())db.active=db.places[0]?.id||null;}}catch(e){storageBlocked=true;status('⚠ 無法讀取本機資料，已停止覆寫。請保留目前瀏覽器資料並聯絡協助。');}
   load();if(storageBlocked)document.querySelectorAll('main input,main button,main select').forEach(e=>e.disabled=true);
   if(window.isSecureContext&&location.protocol!=='file:'&&'serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{$('offline-state').textContent='✓ 離線可用（法規來源連結仍需網路）';}).catch(()=>{$('offline-state').textContent='離線快取未完成，請保持連線後重新開啟。';});}

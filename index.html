@@ -19,7 +19,7 @@
   <main class="wrap">
     <div class="steps" aria-label="操作步驟"><span class="step active" id="step1">1 選版本</span><span class="step" id="step2">2 選設備</span><span class="step" id="step3">3 勾缺失並產生文字</span></div>
     <section class="card" aria-labelledby="year-title"><h2 id="year-title">1. 適用的設置標準年份</h2><p class="hint">請填寫已由承辦人確認的法規版本；這裡的選擇不會替個案判定應適用哪一版。</p><label class="field-label" for="year">《各類場所消防安全設備設置標準》版本</label><select class="select" id="year"><option value="">請選擇年份</option></select><div class="toolbar"><button class="primary" type="button" id="next">選擇設備</button><span class="count" id="year-date"></span></div><div class="alert"><p>網站 A 列的是修正／訂定日期，未逐版確認所有條文的施行日期。使用執照年份也不是唯一適用基準；增改建、用途變更及核准圖說須另查。</p></div></section>
-    <section class="card hidden" id="equipment-section" aria-labelledby="equipment-title"><h2 id="equipment-title">2. 勾選受檢消防設備</h2><p class="hint">以下 27 項依網站 A 公開「消防設備」兩頁清單盤點；可複選。本站未連結或修改網站 A。</p><div class="equipment-grid" id="equipment-grid"></div><div class="toolbar"><span class="count" id="equipment-count">已選 0 項</span><button class="primary" type="button" id="inspect">填寫缺失</button></div></section>
+    <section class="card hidden" id="equipment-section" aria-labelledby="equipment-title"><h2 id="equipment-title">2. 勾選受檢消防設備</h2><p class="hint">設備清單依網站 A 整理，另加入機關檢查項目「緊急發電機」；可複選。本站未連結或修改網站 A。</p><div class="equipment-grid" id="equipment-grid"></div><div class="toolbar"><span class="count" id="equipment-count">已選 0 項</span><button class="primary" type="button" id="inspect">填寫缺失</button></div></section>
     <section class="card hidden" id="issues-section" aria-labelledby="issues-title"><h2 id="issues-title">3. 勾選缺失</h2><p class="hint">同一設備可勾選多項；「抽查符合」不列入違規文字。合併選項請在文字欄寫明實際查到哪一種缺失。</p><div class="alert hidden" id="validation-summary" role="alert"></div><div id="inspections"></div><div class="toolbar"><button class="primary" type="button" id="generate">產生違規內容</button></div></section>
     <section class="card hidden" id="result-section" aria-labelledby="result-title"><h2 id="result-title">違規內容草稿</h2><p class="hint">請比對現場事實後再複製到正式文書。無法查定條號的選項會標示「條號待查核」。</p><div class="result" id="result" role="status" aria-live="polite"></div><div class="toolbar"><button class="secondary" type="button" id="copy">複製文字</button><span class="note" id="copy-status"></span></div><div class="followup-field hidden" id="sprinkler-requested-reference"><strong>使用者指定條號（不列入違規內容）</strong><p class="note">以下保留本次指定的合併項對照；須依實際缺失及適用版本查核，不能直接當作法源。</p><div class="followup-output" id="sprinkler-requested-output"></div></div><div class="followup-field hidden" id="system-reference"><strong>機關系統顯示條號（不列入違規內容）</strong><p class="note">以下依使用者提供的機關系統對照記錄，尚未直接查核該系統的法源設定；「系統顯示」不等於設置標準條號。</p><div class="followup-output" id="system-output"></div></div><div class="followup-field hidden" id="followup-result"><strong>複查及測試紀錄（不列入違規內容）</strong><div class="followup-output" id="followup-output"></div><div class="toolbar"><button class="secondary" type="button" id="copy-followup">單獨複製備註與紀錄</button><span class="note" id="followup-copy-status"></span></div></div><div class="alert"><p id="review-message">本工具僅整理檢查文字，不能取代法規適用及裁處判斷。</p></div><ul class="source-list" id="source-list"></ul></section>
   </main>
@@ -35,7 +35,7 @@
       {year:'78',date:'78/07/31 訂定發布',iso:'19890731'}
     ];
     const equipment=[
-      '滅火器','室內栓','室外栓','撒水','水霧','泡沫','CO²(含惰性氣體)','鹵化烴','乾粉','簡易自動滅火','火自報','手報','廣播','瓦斯漏氣火自報','一一九火災通報裝置','標示','照明','避難器具','連結送水管','消防專用蓄水池','排煙','緊急電源插座','無線電通訊輔助','耐燃耐熱','A.T.S緊急供電系統','防災中心','防災監控系統綜合操作裝置'
+      '滅火器','室內栓','室外栓','撒水','水霧','泡沫','CO²(含惰性氣體)','鹵化烴','乾粉','簡易自動滅火','火自報','手報','廣播','瓦斯漏氣火自報','一一九火災通報裝置','標示','照明','避難器具','連結送水管','消防專用蓄水池','排煙','緊急電源插座','無線電通訊輔助','耐燃耐熱','緊急發電機','A.T.S緊急供電系統','防災中心','防災監控系統綜合操作裝置','住宅用火災警報器'
     ];
     const extinguisherIssues=[
       {id:'pass',label:'抽查符合',article:null,pass:true},
@@ -149,11 +149,12 @@
     const systemArticleFor=(year,issueId)=>year==='78'?null:(year==='110'?systemArticles110:systemArticles85Plus)[issueId]||null;
     const $=id=>document.getElementById(id);
     const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    function renderIndependentRows(issues){
+    function renderIndependentRows(issues,extraFields=()=> ''){
       return issues.flatMap(issue=>(issue.variants||[null]).map((variant,index)=>{
+        if(issue.hiddenVariantIndices?.includes(index))return '';
         const label=variant||issue.label;
         const article=issue.variantArticles?.[index]||issue.article;
-        return `<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="${issue.id}" data-variant-index="${variant?index:''}"><span>${escapeHtml(label)} <span class="article${article?'':' review'}">${article?`第${article}條`:'條號待查核'}</span></span></label>${issue.note?`<p class="note" style="margin:7px 0 0">${escapeHtml(issue.note)}</p>`:''}<input class="detail" type="text" maxlength="350" aria-label="${escapeHtml(label)}的具體事實" placeholder="必填，例如：${escapeHtml(issue.example||'樓層、位置與實際查得情形')}"></div>`;
+        return `<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="${issue.id}" data-variant-index="${variant?index:''}"><span>${escapeHtml(label)} <span class="article${article?'':' review'}">${article?`第${article}條`:'條號待查核'}</span></span></label>${issue.note?`<p class="note" style="margin:7px 0 0">${escapeHtml(issue.note)}</p>`:''}<input class="detail" type="text" maxlength="350" aria-label="${escapeHtml(label)}的具體事實" placeholder="必填，例如：${escapeHtml(issue.example||'樓層、位置與實際查得情形')}">${extraFields(issue,index)}</div>`;
       })).join('');
     }
     const checkedEquipment=()=>[...document.querySelectorAll('#equipment-grid input:checked')].map(input=>input.value);
@@ -267,7 +268,7 @@
       {id:'missing',article:'13',label:'火警自動警報設備未設',example:'應設設備之樓層及未設範圍',note:'核對當版應設條件及免設規定。'},
       {id:'receiverPosition',article:'87',label:'受信總機設置位置或高度不符、外殼未接地',variants:['受信總機設置位置不符','受信總機設置高度不符','受信總機外殼未接地'],example:'1樓受信總機外殼未接地'},
       {id:'detectorFault',article:'78',label:'探測器故障、無法正常動作',example:'2樓走廊偵煙型探測器經測試無法正常動作',note:'填型式、位置及測試結果；其他型式須核認可內容。拆除造成未防護選第79條；位置不符依事實選第79或81條。'},
-      {id:'coverage',article:'79',label:'探測器數量不足（未防護）、有效探測範圍或配置不符',variants:['探測器數量不足或未防護','有效探測範圍不足','探測器配置不符'],example:'2樓新增隔間內未設探測器，該室未受有效防護',note:'包括樑、分間牆、裝置面高度等造成的防護不足；數量與範圍須核78年附表六及現場條件。'},
+      {id:'coverage',article:'79',label:'探測器數量不足（未防護）、有效探測範圍或配置不符',variants:['探測器數量不足或未防護','有效探測範圍不足','探測器配置不符','探測器拆除造成未防護'],example:'2樓新增隔間內未設探測器，該室未受有效防護',note:'包括樑、分間牆、裝置面高度等造成的防護不足；數量與範圍須核78年附表六及現場條件。'},
       {id:'construction',article:'80',label:'探測器構造不符規定',example:'探測器感知部分與底座分離時未發出警告（填位置與測試情形）',note:'保留A原列項目；須指出第80條具體構造或功能不符，不代替一般故障。'},
       {id:'detectorPosition',article:'81',label:'探測器裝置位置不符',example:'3樓探測器與天花板出風口距離不足（填實測距離）',note:'核對天花板下方位置、煙熱蓄積處、排氣口／出風口距離等實際情形。'},
       {id:'zone',article:'76',label:'火警分區不符',example:'同一火警分區跨越3個樓層（填分區及樓層）',note:'同一火警分區跨樓層、面積超過600平方公尺或任一邊長超過50公尺，且不符合上下兩層合計不超過500平方公尺可共區，或由主要出入口／直通樓梯出入口能直接觀察全層任一角落時面積可放寬至1,000平方公尺的相應規定時，列本項；總機顯示錯區選第86條。'},
@@ -280,7 +281,7 @@
     // 85～113年火自報：以A的型式分類及B歷史條文為主；同條合併，事實由承辦人填寫。
     function fireAlarmModernIssues(year){
       const newer=year==='110'||year==='113';
-      return [
+      const issues=[
         {id:'missing',article:'19',label:'火警自動警報設備未設',example:'○樓應設火警自動警報設備，現場未設',note:'先確認當版第19條應設條件、免設範圍及核准圖說。'},
         {id:'zone',article:'112',label:'應設火警分區未設、分區劃定不符',variants:['應設火警分區未設或未與其他區分開','分區跨樓層、面積或邊長不符','樓梯、昇降路或管道間分區不符'],example:'○樓○區未劃設獨立火警分區（填樓層、面積或邊長）',note:'本條是分區劃定；總機動作時顯示錯區，選第125條。'},
         {id:'ring',article:'113',label:'火警分區鳴動方式不符',variants:newer?['起火層初期分區鳴動範圍錯誤','10分鐘內或再接受火災信號時未全區鳴動']:['起火層分區鳴動範圍錯誤'],example:'○樓起火測試時，應鳴動的○樓未鳴動',note:`${year==='85'?'85年面積門檻為超過3,000平方公尺':'五樓以上且總面積3,000平方公尺以上才適用分區鳴動'}；${newer?'110年起另有10分鐘內或再接受火災信號時全區鳴動要求。':'本版尚無110年新增的10分鐘／再次受信全區鳴動款。'}手報機按下不當然一律立即全區鳴動。`},
@@ -289,11 +290,11 @@
         {id:'typeEnvironment',article:'117',label:'探測器型式不適合粉塵、水蒸氣等環境',example:'○區粉塵大量滯留，仍裝設○型探測器（填實況）',note:'須按該版條文及附表，確認環境是否造成所選型式的機能障礙。'},
         {id:'typePlace',article:'118',label:'樓梯、坑道、特殊樓層等場所探測器種類選用錯誤',example:'○棟樓梯間裝設○型探測器，不符第118條可選型式',note:'第118條是場所與型式；樓梯偵煙探測器垂直距離不足選第122條。'},
         {id:'beamArea',article:'119',label:'樑或類似構造造成探測區域劃分不符',variants:['樑形成獨立探測區域但未區分或未防護'],example:'○樓○型探測器裝置面有淨高○公分樑，樑後○區未受防護',note:'第119條判斷探測區域；數量或覆蓋不足另依實際型式選第120～124條。'},
-        {id:'spotHeat',article:'120',label:'差動／補償／定溫式局限型：損壞、拆除、位置或數量不符',variants:['探測器故障或經測試不動作','探測器拆除造成防護不足','距裝置面高度不符','配置數量或有效探測範圍不足','定溫性能與平時周圍溫度不符'],example:'○樓○區差動式局限型探測器經測試不動作（或填距裝置面、缺少數量）',note:'填明型式、位置及具體測試；依裝置面高度、構造與有效探測範圍核數量。'},
-        {id:'distributedHeat',article:'121',label:'差動式分布型／定溫式線型：損壞、拆除、位置或防護不符',variants:['探測器故障或拆除','空氣管長度、間距或裝置位置不符','熱電偶或熱半導體數量與位置不符','定溫式線型水平防護距離不足'],example:'○區差動式空氣管露出長度○公尺，不足規定（或填其他實際型式與缺失）',note:'空氣管、熱電偶、熱半導體、定溫式線型各有不同位置與數量規定。'},
-        {id:'smoke',article:'122',label:'偵煙式：損壞、拆除、位置、數量或樓梯配置不符',variants:['偵煙式探測器故障或拆除','距裝置面、牆或樑位置不符','居室或走廊配置數量不足','樓梯、斜坡通道或電扶梯垂直距離不足','昇降路或管道間位置不符'],example:'○棟樓梯偵煙探測器垂直間距○公尺，超過本型式規定',note:'不含光電式分離型；樓梯按垂直距離15公尺、第三種10公尺檢討，非固定每三層一顆。'},
-        {id:'beamDetector',article:'123',label:'光電式分離型：損壞、拆除、光軸位置或防護不符',variants:['探測器故障或拆除','光軸高度、牆距或日照位置不符','標稱監視距離或警戒範圍不足'],example:'○區光電分離型探測器光軸距警戒區最遠點○公尺，超過規定',note:'核對光軸高度、監視距離、牆距及警戒範圍。'},
-        {id:'flame',article:'124',label:'火焰式：損壞、拆除、遮蔽或監視範圍不足',variants:['探測器故障或拆除','障礙物遮蔽或裝置位置不符','標稱監視距離造成防護不足','日照造成探測障礙'],example:'○區火焰式探測器前方遭○物遮擋，無法探測○範圍',note:'核對障礙物、標稱監視距離及日照例外。'},
+        {id:'spotHeat',article:'120',label:'差動／補償／定溫式局限型：位置或數量不符',variants:['探測器故障或經測試不動作','探測器拆除造成防護不足','距裝置面高度不符','配置數量或有效探測範圍不足','定溫性能與平時周圍溫度不符'],hiddenVariantIndices:[0,1],example:'○樓○區差動式局限型探測器距裝置面○公分',note:'填明型式及位置；依裝置面高度、構造與有效探測範圍核數量。'},
+        {id:'distributedHeat',article:'121',label:'差動式分布型／定溫式線型：位置或防護不符',variants:['探測器故障或拆除','空氣管長度、間距或裝置位置不符','熱電偶或熱半導體數量與位置不符','定溫式線型水平防護距離不足'],hiddenVariantIndices:[0],example:'○區差動式空氣管露出長度○公尺，不足規定',note:'空氣管、熱電偶、熱半導體、定溫式線型各有不同位置與數量規定。'},
+        {id:'smoke',article:'122',label:'偵煙式：位置、數量或樓梯配置不符',variants:['偵煙式探測器故障或拆除','距裝置面、牆或樑位置不符','居室或走廊配置數量不足','樓梯、斜坡通道或電扶梯垂直距離不足','昇降路或管道間位置不符'],hiddenVariantIndices:[0],example:'○棟樓梯偵煙探測器垂直間距○公尺，超過本型式規定',note:'不含光電式分離型；樓梯按垂直距離15公尺、第三種10公尺檢討，非固定每三層一顆。'},
+        {id:'beamDetector',article:'123',label:'光電式分離型：光軸位置或防護不符',variants:['探測器故障或拆除','光軸高度、牆距或日照位置不符','標稱監視距離或警戒範圍不足'],hiddenVariantIndices:[0],example:'○區光電式分離型探測器光軸距警戒區最遠點○公尺，超過規定',note:'核對光軸高度、監視距離、牆距及警戒範圍。'},
+        {id:'flame',article:'124',label:'火焰式：遮蔽或監視範圍不足',variants:['探測器故障或拆除','障礙物遮蔽或裝置位置不符','標稱監視距離造成防護不足','日照造成探測障礙'],hiddenVariantIndices:[0],example:'○區火焰式探測器前方遭○物遮擋，無法探測○範圍',note:'核對障礙物、標稱監視距離及日照例外。'},
         {id:'receiver',article:'125',label:`受信總機故障、分區顯示錯誤、通話或分區圖不符${newer?'、娛樂影音未連動或強制鳴動功能不符':''}`,variants:['受信總機火警區域表示或警戒音響故障','火警動作時總機標示分區錯誤','依法或圖說應顯示火警分區的副機未顯示','受信總機間通話裝置不符','總機附近欠缺識別火警分區圖面','蓄積／雙信號功能不符',...(newer?['應連動停止娛樂影音設備而未連動','強制地區警報音響鳴動功能不符']:[])],example:'○樓○區觸發後，受信總機顯示○區（或填其他實際失效功能）',note:`如涉及主機與大廳副機，先確認副機依法或圖說應顯示分區及實測結果；第4款是總機間通話，不是概括移報義務。${newer?'未達350平方公尺的合格單回路總機，另核第2項例外。':''}`},
         {id:'receiverPosition',article:'126',label:'受信總機設置位置、高度不符或外殼未接地',variants:['受信總機設置位置不符','受信總機設置高度不符','受信總機外殼未接地'],example:'○樓受信總機外殼未接地（或填設置位置與實測高度）'},
         {id:'wiring',article:'127',label:'火警回路斷線、配線／共線／絕緣不符',variants:['火警回路斷線','配線不符規定','共線不符規定','絕緣不符規定'],example:'○樓○號探測器回路斷線，測試結果為○○',note:'共線七分區及50Ω是P型總機規定；R型只有歷史故障紀錄不能直接選本條。'},
@@ -305,11 +306,42 @@
         {id:'cableProtection',article:year==='85'?'195':'236',label:'緊急供電配線耐燃／耐熱保護不符',example:'○設備○回路○位置的配線未依核准圖說施作○種保護',note:`須按實際回路、核准圖說與當版附表核對；配線施作方式另見第${year==='85'?'194':'235'}條。無法現場查證時勿勾選。`},
         {id:'rHistory',article:null,pending:true,label:'R型總機目前故障或隔離（原因與條號待查）',example:'○樓○區檢查當下仍顯示隔離；實測○區無法正常受信',note:'僅有不可刪的已排除歷史紀錄，不是缺失；本項不預設第127條。'}
       ];
+      return issues.flatMap(issue=>{
+        const types=alarmDetectorTypes[issue.id];
+        if(!types)return [issue];
+        const detectorRows=types.map((type,index)=>({
+          id:`detector-${issue.id}-${index}`,article:issue.article,detectorType:type,
+          label:`${type}：故障／經測試不動作／遭拆除`,
+          example:`○樓○區${type}經測試不動作；填明設備位置與測試結果`,
+          note:'拆除時寫明實際未受防護範圍；故障時寫明失效部位或測試結果。'
+        }));
+        return [...detectorRows,issue];
+      });
+    }
+    const alarmDetectorTypes={
+      legacy:['定溫型','差動型','偵煙型','其他經認可型式'],
+      spotHeat:['差動式局限型探測器','補償式局限型探測器','定溫式局限型探測器'],
+      distributedHeat:['差動式分布型（空氣管式）探測器','差動式分布型（熱電偶式）探測器','差動式分布型（熱半導體式）探測器','定溫式線型探測器'],
+      smoke:['離子式局限型偵煙探測器','光電式局限型偵煙探測器'],beamDetector:['光電式分離型探測器'],flame:['火焰式探測器']
+    };
+    function detectorFields(issue,index){
+      let types,states;
+      if(issue.detectorType){
+        states=['故障','經測試不動作','遭拆除'];
+        return '<select class="fire-alarm-variant" data-detector="state" aria-label="'+escapeHtml(issue.detectorType)+'缺失情形"><option value="">請選擇缺失情形</option>'+states.map(v=>'<option>'+v+'</option>').join('')+'</select>';
+      }else if(issue.id==='detectorFault'){
+        types=alarmDetectorTypes.legacy; states=['故障','經測試不動作'];
+      }else if(issue.id==='coverage'&&index===3){
+        types=alarmDetectorTypes.legacy; states=['遭拆除，造成防護不足'];
+      }else return '';
+      const select=(field,title,values)=>'<select class="fire-alarm-variant" data-detector="'+field+'" aria-label="'+title+'">'+(values.length>1?'<option value="">請選擇'+title+'</option>':'')+values.map(v=>'<option>'+v+'</option>').join('')+'</select>';
+      const otherName=types===alarmDetectorTypes.legacy?'<input class="detail detector-name" maxlength="80" aria-label="其他經認可型式名稱" placeholder="選其他經認可型式時必填實際器名">':'';
+      return select('type','探測器型式',types)+select('state','缺失情形',states)+otherName;
     }
     function renderFireAlarm(year){
       const older=year==='78';
       const issues=older?fireAlarm78Issues:fireAlarmModernIssues(year);
-      const rows=renderIndependentRows(issues);
+      const rows=renderIndependentRows(issues,detectorFields);
       const version=versions.find(item=>item.year===year);
       const lawUrl=`https://law.nfa.gov.tw/MOBILE/law.aspx?lsid=FL005059${year==='113'?'':`&ldate=${version.iso}`}`;
       return `<article class="inspection" data-equipment="火警自動警報設備"><h3>火警自動警報設備（${year}年版）</h3><p>${older?'依A網站78年清單與承辦人二次確認整理':'依A網站火自報分類、機關110年選項及消防署各版條文整理'}；各項缺失獨立勾選。勾選後請寫明本次實際缺失，草稿只列填入的事實。</p><div class="issue-grid"><div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="pass"><span>抽查符合</span></label><input class="detail" type="text" maxlength="350" aria-label="火警自動警報設備抽查備註" placeholder="選填：抽查位置與測試紀錄，不列入違規內容"></div>${rows}<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="other"><span>其他</span></label><input class="detail" type="text" maxlength="350" aria-label="火警自動警報設備其他缺失" placeholder="必填：自行填寫實際缺失，無預設條號"></div></div><p class="note" style="margin-top:12px">正式開單仍須核對適用版本、具體條款、相關函釋與現場證據；${older?'防護範圍須核78年附表六。預備電源依確認對照第86條，外殼接地依第87條。':'探測器型式、高度、探測區域及得免設條件須依當版條文、附表與核准圖說檢討。'}</p><div class="followup-field"><label class="field-label" for="fire-alarm-followup">複查位置及測試紀錄（不列入違規內容）</label><textarea class="followup-input" id="fire-alarm-followup" maxlength="1000" placeholder="樓層、總機分區、探測器型式、已測／未測項目及測試結果。"></textarea></div><p class="note"><a href="https://new-3d2y.glide.page/dl/d0a5f4/s/2da2a9/r/XUvp5bcmKrFKUyfmhfGq" target="_blank" rel="noopener noreferrer">A網站火自報清單</a> · <a href="${lawUrl}" target="_blank" rel="noopener noreferrer">消防署${year}年條文</a></p></article>`;
@@ -728,13 +760,205 @@
     }
     const signage78Issues=[{"id":"exitMissing","article":"17","clause":"第1款","label":"出口標示燈未依規定設置","note":"第5條第1至3款場所，集合住宅及學校教室除外；請記錄通達安全梯、戶外或另一防火區劃防火門的位置。"},{"id":"directionMissing","article":"17","clause":"第2款","label":"避難方向指示燈（標）未依規定設置","note":"請記錄通往樓梯、屋外、陽台、屋頂平台或觀眾席通路的走廊、通道及欠缺位置。集合住宅及學校教室仍須檢討本款。"},{"id":"exit","article":"92","clause":"","label":"出口標示燈不符規定","note":"應保持不熄滅，30公尺處可辨文字及顏色；綠底白色安全門字樣與圖形，尺寸依第92條。緊急供電系統性能另核第109條。","variants":["出口標示燈故障不亮","出口標示燈亮度不足，30公尺處無法辨識文字及顏色","出口標示燈標示面顏色、文字或圖形不符","出口標示燈尺寸不符","出口標示燈未連接緊急電源"]},{"id":"direction","article":"93","clause":"","label":"避難方向指示燈不符規定","note":"應保持不熄滅；燈正下方距地0.5公尺處至少0.5 Lux，地面式踏板中心線至少1 Lux。記錄測點、實測值或失效情形。","variants":["避難方向指示燈故障不亮","避難方向指示燈照度不足","避難方向指示燈位置妨礙通行","避難方向指示燈遭裝潢或廣告招牌遮蔽視線","地板面避難方向指示燈強度不符","避難方向指示燈標示面顏色、圖形或尺寸不符","避難方向指示燈未連接緊急電源"]},{"id":"indicator","article":"94","clause":"","label":"避難方向指標不符規定（非燈具）","note":"堅固耐久材料、白底綠色圖形，長邊至少30公分、短邊至少10公分。燈具故障及照度不足使用第93條。","variants":["避難方向指標材料不堅固耐久","避難方向指標顏色或圖形不符","避難方向指標尺寸不符"]}];
 
+
+    const modernLampYears=['85','93','102','107','110','113'];
+    const modernSignageIssues=[{"id":"exitMissing","label":"出口標示燈未設","article":"23","note":"先確認第23條應設用途及第146條免設條件，記錄漏設位置與用途。"},{"id":"exitFault","label":"出口標示燈故障（緊急電源測試不亮）","article":"155","note":"操作切斷常用電源的緊急電源測試開關後未能點亮。短按會亮不代表供電時間合格；一般常用電源下未保持點亮另核第146-7條。不得未查原因即寫蓄電池損壞。"},{"id":"exitSpec","label":"出口標示燈規格不符","article":"146-2","note":"機關系統引用第146-2條。實際檢討：第146-1條為標示面尺寸、等級及光度（方向燈限非樓梯或坡道）；第146-2條為有效範圍；第154條為燈具規格及認可基準。請依實際缺失選擇引用條號。","articles":["146-2","146-1","154"]},{"id":"exitFlashMissing","label":"出口標示燈未具閃滅或音聲引導功能","article":"146-5","note":"依第146-5條適用用途、面積及走廊例外判斷；甲類第六目須具閃滅或兼具音聲引導。核對核准圖說及99年11月19日內授消字第0990825462號函的審查時點；非所有場所一律應設。"},{"id":"exitLight","label":"出口標示燈照度不足（機關項目；實際檢討標示面光度）","article":"146-5","note":"光度單位為cd，不是地面照度Lux。第146-5條限特定場所加強要求；一般等級光度依第146-1條。記錄等級、用途及實測光度。","articles":["146-5","146-1"]},{"id":"exitBlocked","label":"出口標示燈遮蔽","article":"146-4","note":"周圍裝潢或廣告招牌影響視線，依第2款記錄障礙物及位置。"},{"id":"exitFlashFault","label":"出口標示燈閃滅或音聲引導功能故障","article":"146-5","note":"依第146-5條適用用途、面積及走廊例外判斷；甲類第六目須具閃滅或兼具音聲引導。核對核准圖說及99年11月19日內授消字第0990825462號函的審查時點；非所有場所一律應設。 記錄火警連動或停止功能測試結果。"},{"id":"directionMissing","label":"避難方向指示燈未設","article":"23","note":"先確認第23條應設用途及第146條免設條件，記錄漏設位置與用途。"},{"id":"directionFault","label":"避難方向指示燈故障（緊急電源測試不亮）","article":"155","note":"操作切斷常用電源的緊急電源測試開關後未能點亮。短按會亮不代表供電時間合格；一般常用電源下未保持點亮另核第146-7條。不得未查原因即寫蓄電池損壞。"},{"id":"directionLux","label":"避難方向指示燈照度不足","article":"146-5","note":"樓梯級面或坡道表面至少1 Lux；記錄測點、測試條件及數值。非樓梯或坡道的標示面光度，依第146-1條或第146-5條適用條件檢討。","articles":["146-5","146-1"]},{"id":"directionSpec","label":"避難方向指示燈規格不符","article":"146-2","note":"機關系統引用第146-2條。實際檢討：第146-1條為標示面尺寸、等級及光度（方向燈限非樓梯或坡道）；第146-2條為有效範圍；第154條為燈具規格及認可基準。請依實際缺失選擇引用條號。","articles":["146-2","146-1","154"]},{"id":"directionBlocked","label":"避難方向指示燈遮蔽","article":"146-4","note":"機關原列第146-5條，依正式條文修正為第146-4條第2款；非電氣式指標請選下一項。"},{"id":"indicatorBlocked","label":"避難指標遮蔽（非燈具）","article":"153","note":"依第153條第3款，記錄影響視線之裝潢或廣告招牌。"}];
+    const modernLightingIssues=[{"id":"missing","label":"緊急照明設備未設","article":"24","note":"記錄應設居室或避難路徑及用途，先核第179條免設規定。"},{"id":"fault","label":"緊急照明設備故障（緊急電源測試不亮）","article":"177","note":"操作緊急電源測試開關後未能點亮，記錄測試結果。短按點亮不能證明持續供電時間合格。"},{"id":"partial","label":"緊急照明設備部分未設、數量不足","article":"178","note":"須對應地面照度不足或走廊曲折點未增設，記錄測點與數值或漏設曲折點；先查第179條免設規定。應設居室或路徑整個未設請選第24條。"},{"id":"lux","label":"緊急照明設備照度不足","article":"178","note":"地面水平照度：地下建築物之地下通道至少10 Lux，其他場所至少2 Lux；不是所有地下室均10 Lux。記錄測點、測試條件及數值。"},{"id":"spec","label":"緊急照明設備規格不符","article":"175","note":"限燈具構造、耐熱絕緣、瞬時點燈等本條要求，記錄光源型式及具體不符情形。"}];
+
+    function lampIssues(year,lighting){
+      if(!['85','93'].includes(year))return lighting?modernLightingIssues:modernSignageIssues;
+      if(lighting)return modernLightingIssues.map(i=>({...i,article:year==='85'?({missing:'24',fault:'178',partial:'179',lux:'179',spec:'176'}[i.id]):i.article,note:year==='85'?i.note.replaceAll('第179條免設','第175條免設').replace('其他場所至少2 Lux','其他場所至少1 Lux'):i.note}));
+      const issue=(id,label,article,note,extra={})=>({id,label,article,note,...extra});
+      const missing='先核第23條應設義務及本年度第146條免設條件，記錄用途與漏設位置；85、93年免設條件不同。';
+      const fault='操作切斷常用電源的緊急電源測試開關後未能點亮；短按會亮不能證明20分鐘供電容量合格，未確認原因不直接寫蓄電池損壞。';
+      return [
+        issue('exitMissing','出口標示燈未設','23',missing),
+        issue('exitFault','出口標示燈故障（緊急電源測試不亮）','155',fault+' 一般未保持點亮另核第148條。'),
+        issue('exitSpec','出口標示燈規格不符','149','第149條為大、中、小型尺寸及選用；第154條為燈具規格構造及CNS 10207要求，不直接等同未認證。甲類未達列管面積不代表可一律使用小型；須依出入口類型及總樓地板面積判斷。',{articles:['149','154']}),
+        issue('exitLight','出口標示燈亮度不足','148',year==='85'?'第148條為標示面圖形及顏色的辨識要求，無地面照度數值。消防署85年網頁載三公尺，與93年三十公尺不同；85年原始公報尚待核對，勿逕套30公尺。記錄實際觀察距離及辨識結果。':'直線距離30公尺應能辨識標示面圖形及顏色，無地面照度數值。戲院、電影院、劇院等表演場所符合本條連動或三線式配線條件時，得減光或消燈。'),
+        issue('exitBlocked','出口標示燈遮蔽（條號待查核）',null,'第150條明文規範避難方向指示燈，尚無已確認依據直接套用出口燈遮蔽。本項只記錄遮擋物與位置，輸出不預設條號；須依具體事實及函釋另核。'),
+        issue('directionMissing','避難方向指示燈未設','23',missing),
+        issue('directionFault','避難方向指示燈故障（緊急電源測試不亮）','155',fault+' 一般未保持點亮另核第151條。'),
+        issue('directionLux','避難方向指示燈照度不足','151','燈正下方距地面0.5公尺處應有1 Lux以上；記錄測點、測試條件及實測值，不套用新版樓梯級面測點。'),
+        issue('directionSpec','避難方向指示燈規格不符','152','第152條為標示面尺寸與大、中、小型選用；第154條為規格構造及CNS 10207要求。是否應有認可標識須依產品及適用時點另核，不直接將154等同未認證。',{articles:['152','154']}),
+        issue('directionBlocked','避難方向指示燈遮蔽','150','依第150條第4款，記錄影響視線的裝潢或廣告招牌；本條不直接套用出口燈。',{clause:'第4款'}),
+        issue('indicatorBlocked','避難指標遮蔽（非燈具）','153','記錄影響視線的裝潢或廣告招牌；非電氣式指標不使用155電源故障。',{clause:'第3款'}),
+        issue('indicatorVisibility','避難指標未設於易見且採光良好處','153','記錄設置位置、採光情形及無法辨識的具體情形，不籠統寫故障。標示本體褪色、磨損或材質問題，另核第154條第2項及CNS 10208具體要求。',{clause:'第4款'})
+      ];
+    }
+    function renderModernLamps(year,lighting){
+      const name=lighting?'緊急照明設備':'標示設備';
+      const items=lampIssues(year,lighting);
+      const rows=[{id:'pass',label:'抽查符合'},...items,{id:'other',label:'其他缺失（條號待查核）'}].map(i=>'<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="'+i.id+'"><span>'+escapeHtml(i.label)+(i.article?' <span class="article">第'+i.article+'條'+(i.clause||'')+'</span>':'')+'</span></label><p class="note">'+escapeHtml(i.note||'')+'</p>'+(i.articles?'<label>實際引用條號<select class="lamp-article" aria-label="實際引用條號">'+i.articles.map(a=>'<option value="'+a+'">第'+a+'條</option>').join('')+'</select></label>':'')+'<input class="detail" type="text" maxlength="350" aria-label="現場事實" placeholder="'+(i.id==='pass'?'選填：抽查紀錄':'必填：樓層、位置、用途、實測值或測試結果')+'"></div>').join('');
+      const date={'85':'19960313','93':'20040406','102':'20130501','107':'20181017','110':'20210625','113':'20240424'}[year];
+      return '<article class="inspection" data-equipment="'+name+'"><h3>'+name+'（'+year+'年版）</h3><p>以機關系統缺失項目為主，依具體事實核對條文。</p><div class="issue-grid">'+rows+'</div><p class="note">'+(lighting?'先核第24條應設義務與第'+(year==='85'?'175':'179')+'條免設規定。':'先核第23條應設義務與本年度第146條免設規定；規格不符依實際內容選擇條號。')+'</p><a href="https://law.nfa.gov.tw/MOBILE/law.aspx?lsid=FL005059&amp;ldate='+date+'" target="_blank" rel="noopener noreferrer">消防署'+year+'年條文</a> · <a href="https://law.nfa.gov.tw/MOBILE/search_fint.aspx" target="_blank" rel="noopener noreferrer">函釋檢索</a></article>';
+    }
     function renderSignage(year){
+      if(modernLampYears.includes(year))return renderModernLamps(year,false);
       if(year!=='78')return renderUnverified('標示');
       const rows=[{id:'pass',label:'抽查符合'},...signage78Issues,{id:'other',label:'其他標示缺失（條號待查核）'}].map(issue=>'<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="'+issue.id+'"><span>'+escapeHtml(issue.label)+(issue.article?' <span class="article">第'+issue.article+'條'+issue.clause+'</span>':'')+'</span></label><p class="note">'+escapeHtml(issue.note||'')+'</p>'+(issue.variants?'<select class="fire-alarm-variant" aria-label="實際缺失類型"><option value="">請選擇實際缺失</option>'+issue.variants.map((v,i)=>'<option value="'+i+'">'+escapeHtml(v)+'</option>').join('')+'</select>':'')+'<input class="detail" type="text" maxlength="350" aria-label="現場事實" placeholder="'+(issue.id==='pass'?'選填：抽查紀錄':'必填：樓層、位置、用途或測試結果')+'"></div>').join('');
       return '<article class="inspection" data-equipment="標示設備"><h3>標示設備（78年版）</h3><p>依現場設備選擇出口標示燈、避難方向指示燈或非電氣式指標。</p><div class="issue-grid">'+rows+'</div><p class="note">84年9月13日消署預字第8450760號提案三二：集合住宅及學校教室仍須依第17條第2款檢討方向指示燈（標）。請核對適用版本、核准圖說及函釋。</p><a href="https://law.nfa.gov.tw/MOBILE/law.aspx?lsid=FL005059&amp;ldate=19890731" target="_blank" rel="noopener noreferrer">消防署78年條文</a></article>';
     }
+    const lighting78Issues=[{"id":"missingRoom","article":"18","clause":"第1款","label":"應設緊急照明的居室未設","note":"先核第5條用途是否屬第18條第1款列舉範圍；填寫用途、樓層及居室位置。"},{"id":"missingRoute","article":"18","clause":"第2款","label":"應設緊急照明的避難路徑未設","note":"限前款場所自居室通達避難層所經走廊、樓梯間、通道及其他平時依賴人工照明部分；填寫用途及路徑。"},{"id":"partial","article":"102","clause":"（依第18條）","label":"應設部位部分未設緊急照明","note":"寫明第18條應設範圍及漏設部位。第102條未規定每面積固定盞數，不能只寫數量不足。"},{"id":"lux","article":"104","clause":"","label":"緊急照明地面水平照度不足1 Lux","note":"必填測量位置、測試條件及實測照度。機關列第103條，本項依78年原文引用第104條。"},{"id":"faultLux","article":"104","clause":"","label":"緊急照明燈故障不亮，造成地面水平照度不足1 Lux","note":"必填故障位置、測試條件及實測照度；未確認照度或故障原因時，使用其他缺失待核。"},{"id":"bend","article":"104","clause":"","label":"走廊曲折點未增設緊急照明燈","note":"填寫樓層、走廊曲折點及現場配置。"},{"id":"structure","article":"103","clause":"","label":"緊急照明燈構造或瞬時起動性能不符","variants":["白熾燈燈泡或燈座構造不符","日光燈非瞬時起動型或燈座材質不符","水銀燈非高壓瞬時點燈型或燈座材質不符","其他光源耐熱絕緣、瞬時點燈特性或核准條件不符","放電燈安定器未裝於耐熱性外箱"],"note":"依實際光源型式及第103條具體款次查核；不得將所有故障一律歸入本項。緊急供電切換或蓄電池問題另核第109條。"}];
+    function renderLighting(year){
+      if(modernLampYears.includes(year))return renderModernLamps(year,true);
+      if(year!=='78')return renderUnverified('照明');
+      const rows=[{id:'pass',label:'抽查符合'},...lighting78Issues,{id:'other',label:'其他緊急照明缺失（條號待查核）'}].map(issue=>'<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="'+issue.id+'"><span>'+escapeHtml(issue.label)+(issue.article?' <span class="article">第'+issue.article+'條'+issue.clause+'</span>':'')+'</span></label><p class="note">'+escapeHtml(issue.note||'')+'</p>'+(issue.variants?'<select class="fire-alarm-variant" aria-label="實際缺失類型"><option value="">請選擇實際缺失</option>'+issue.variants.map((v,i)=>'<option value="'+i+'">'+escapeHtml(v)+'</option>').join('')+'</select>':'')+'<input class="detail" type="text" maxlength="350" aria-label="現場事實" placeholder="'+(issue.id==='pass'?'選填：抽查紀錄':'必填：樓層、位置、用途或測試結果')+'"></div>').join('');
+      return '<article class="inspection" data-equipment="緊急照明設備"><h3>緊急照明設備（78年版）</h3><p>依未設部位、構造或實測照度選擇缺失；填寫現場事實。</p><div class="issue-grid">'+rows+'</div><p class="note">84年消署預字第8450760號提案二四對當時補習班、幼稚園及托兒所之應設判斷有說明；須核用途、適用版本、後續規定與核准圖說。其他缺失不預設條號。</p><a href="https://law.nfa.gov.tw/MOBILE/law.aspx?lsid=FL005059&amp;ldate=19890731" target="_blank" rel="noopener noreferrer">消防署78年條文</a></article>';
+    }
+    // 85～113年緊急發電機：依承辦確認項目及消防署歷史條文整理。
+    function generatorIssues(year){
+      const article=year==='85'?'196':'237';
+      return [
+        {id:'missing',label:'未設',article:'38',note:'限室內消防栓設備欠缺合規緊急電源；先核蓄電池或依法可採之引擎動力系統，不以沒有發電機直接認定。'},
+        {id:'fault',label:'故障（含啟動電瓶沒電、無法啟動）',article,note:'記錄故障部位及啟動測試結果，例如啟動電瓶電力不足，致發電機無法啟動。'},
+        {id:'transfer',label:'自動切換裝置故障',article,clause:'第2款',note:'記錄常用電源中斷或恢復時，哪一項自動切換功能失效。'},
+        {id:'fuel',label:'油料不足',article:'38',note:'法定要求為供室內消防栓有效動作30分鐘以上。油量剩不到1/3為承辦實務檢查提醒，非法律門檻；須記錄可用油量、耗油量或測試資料，不能僅憑油表比例推定未達30分鐘。'},
+        {id:'protection',label:'防火區劃破壞或無防水措施',article,clause:'第4款',note:'記錄實際缺失為防火構造破壞、欠缺防雨或欠缺防積水措施。'+(year==='85'?'85年第196條原文僅規定防火構造；屋外防水例外於93年增列，85年案件援用放寬須另核適用依據，不得標為85年原文明定。':'屋外設有不受積水及雨水侵襲之防水措施者，得不受本款防火構造要求限制。')},
+        {id:'stopped',label:'發電機開關切停／未置於自動檔位',article,clause:'第2款',note:'記錄檢查時實際檔位及其導致常用電源中斷時無法自動供電的情形。'}
+      ];
+    }
+    function renderGenerator(year){
+      if(!['85','93','102','107','110','113'].includes(year))return renderUnverified('緊急發電機');
+      const rows=[{id:'pass',label:'抽查符合'},...generatorIssues(year)].map(i=>'<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="'+i.id+'"><span>'+escapeHtml(i.label)+(i.article?' <span class="article">第'+i.article+'條'+(i.clause||'')+'</span>':'')+'</span></label><p class="note">'+escapeHtml(i.note||'')+'</p><input class="detail" type="text" maxlength="350" aria-label="現場事實" placeholder="'+(i.id==='pass'?'選填：抽查紀錄':'必填：位置、實際缺失及測試結果')+'"></div>').join('');
+      const date={'85':'19960313','93':'20040406','102':'20130501','107':'20181017','110':'20210625'}[year];
+      return '<article class="inspection" data-equipment="緊急發電機"><h3>緊急發電機（'+year+'年版）</h3><div class="issue-grid">'+rows+'</div><p class="note">戶外特別註記：須同時確認防雨水及防積水措施，僅有頂棚不代表防水完整。消防署98年5月27日消署預字第0980010624號函說明，屋外防水例外於93年4月6日增列；可採具防雨水、積水效果之圍籬加頂棚或符合相關要求的外箱等方式。供其他消防設備時，另核各設備法定供電時間。</p><a target="_blank" rel="noopener noreferrer" href="https://law.nfa.gov.tw/MOBILE/law.aspx?lsid=FL005059'+(date?'&amp;ldate='+date:'')+'">消防署'+year+'年條文</a> · <a target="_blank" rel="noopener noreferrer" href="https://law.nfa.gov.tw/MOBILE/fintcontent.aspx?EID=D01201,%E6%B6%88%E7%BD%B2%E9%A0%90,0980010624,20090527&amp;ismob=1">戶外防水函釋</a></article>';
+    }
+
+    const confirmedEquipmentIssues={
+ "一一九火災通報裝置": [
+  [
+   "0326A",
+   "未設",
+   "22-1",
+   "應設場所：醫院、療養院、榮譽國民之家；長期照顧服務機構（限機構住宿式、社區式之建築物使用類組非屬 H-2 之日間照顧、團體家屋及小規模多機能）；老人福利機構（限長期照護型、養護型、失智照顧型之長期照顧機構、安養機構）；護理機構（限一般護理之家、精神護理之家）；身心障礙福利機構（限照顧植物人、失智症、重癱、長期臥床或身心功能退化者）；其他經中央主管機關公告之供公眾使用場所。先確認應設義務；無裝置亦無基座時選「未設」。"
+  ],
+  [
+   "0326C",
+   "設置位置不符",
+   "145-1",
+   "主機應設於值日室等經常有人之處所；設有防災中心時，應設於該中心。"
+  ],
+  [
+   "0326D",
+   "設置高度不符",
+   "145-1",
+   "手動啟動裝置的操作開關距樓地板面應為 0.8～1.5 公尺（含兩端）。",
+   "操作開關實測高度"
+  ],
+  [
+   "0326B",
+   "故障或拆除",
+   "145-1",
+   "裝置故障，或裝置拆除而基座仍在，選本項。基座是現場辨識線索。",
+   "故障功能、測試結果或拆除後現況"
+  ]
+ ],
+ "防災中心": [
+  [
+   "039AA",
+   "位置不符",
+   "238",
+   "應設於消防人員自外面容易進出、便於通達緊急昇降機間及特別安全梯處；中心出入口至屋外任一出入口步行距離應在 30 公尺以下。",
+   "位置缺失或實測步行距離"
+  ],
+  [
+   "039AB",
+   "構造不符",
+   "238",
+   "冷暖、換氣等空調系統應專用；監控設備應以地腳螺栓或其他堅固方法固定；設有供操作人員睡眠、休息區域時，該區應以防火區劃間隔。",
+   "空調、設備固定或休息區防火區劃的實際缺失"
+  ],
+  [
+   "039AD",
+   "樓地板面積不符",
+   "238",
+   "防災中心樓地板面積應在 40 平方公尺以上。",
+   "實際樓地板面積"
+  ]
+ ],
+ "簡易自動滅火": [
+  [
+   "0338A",
+   "未設",
+   "18",
+   "餐廳樓地板面積達 300 平方公尺，或第 18 條第 2 項列舉場所樓地板面積合計達 500 平方公尺，其廚房排油煙管及煙罩應設。"
+  ],
+  [
+   "0338B",
+   "連動裝置故障",
+   "111-1",
+   "",
+   "連動對象及測試結果"
+  ],
+  [
+   "0338C",
+   "控制盤故障",
+   "111-1",
+   "依機關預設條號，記錄控制盤異常及受影響功能。",
+   "故障情形及功能測試結果"
+  ],
+  [
+   "0338D",
+   "噴頭損壞或拆除",
+   "111-1",
+   "",
+   "噴頭位置及損壞或拆除情形"
+  ]
+ ],
+ "住宅用火災警報器": [
+  [
+   "0328A",
+   "未設",
+   "",
+   "依消防法第 6 條，按場所區分第 4 項或第 5 項。草稿只列缺失文字。"
+  ],
+  [
+   "0328B",
+   "故障",
+   "",
+   "草稿只列缺失文字。"
+  ]
+ ]
+};
+    function historicalIssues(name,year){
+      const base=confirmedEquipmentIssues[name], y=Number(year);
+      if(!base || !versions.some(v=>v.year===year))return [];
+      if(name==='一一九火災通報裝置'&&y<107 || name==='防災中心'&&y<85 || name==='簡易自動滅火'&&y<93 || name==='住宅用火災警報器'&&y<99)return [];
+      return base.filter(i=>!(name==='簡易自動滅火'&&y===93&&i[0]!=='0338A')).map(item=>{
+        const i=[...item];
+        if(name==='防災中心'&&y===85){
+          i[2]='197';
+          if(i[0]==='039AB')i[3]='85 年版：以防火牆、防火樓板及甲種防火門窗區劃，天花板及室內牆面含底材以不燃材料裝修；另核對專用空調、設備固定及操作人員睡眠休息區的防火區劃。';
+        }
+        if(i[0]==='0326A'&&y===107){i[3]='第 22-1 條自 108/01/01 施行；不能僅憑 107 年版認定未設。'+i[3];i[4]='應設場所用途及適用日期或既設改善依據';}
+        if(i[0]==='0338A'){
+          if(y<=102)i[3]='餐廳樓地板面積達 300 平方公尺，其廚房排油煙管及煙罩應設。';
+          if(y>=102)i[3]+='但已依第 18 條第 1 項規定設有滅火設備者，得免設。';
+          else i[3]+='93 年版尚無第 111-1 條；其他故障不自動套後版條號。';
+        }
+        if(i[0]==='0338B')i[3]='如屬閉鎖閘門連動，應核排油煙管風速是否超過每秒 5 公尺，以及不設閘門仍能有效滅火之例外。';
+        if(i[0]==='0328A'){i[3]+='先確認非依法應設火警自動警報設備之場所，並核對適用公告、設置辦法第 3 條免設範圍及第 9、10 條既設改善期限。';if(y===102){i[3]+='既設一般住宅至 106/12/31 前設置，不因選取 102 年版即已逾期。';i[4]='場所類型、應設位置及適用期限';}}
+        return i;
+      });
+    }
+    const historicalNotices={
+      '簡易自動滅火':'85 年版第 18 條表註只列廚房採自動撒水搭配簡易裝置的替代方式；93 年版起才有餐廳的獨立應設義務。',
+      '防災中心':'本次消防設置標準的三項缺失自 85 年版第 197 條起核對；另有建築法規時須分別確認。',
+      '住宅用火災警報器':'住警器依消防法及住警器設置辦法，並非以建築年度判斷。99 年以前的歷史版本不自動列為當年缺失；今日檢查既設場所仍應另核場所類型及改善期限，可人工記錄。',
+      '一一九火災通報裝置':'107/10/17 才納入設置標準；較早的設置維護注意事項不是第 22-1 條的法定應設義務。'
+    };
+    function renderHistoricalEquipment(name,year){
+      const items=historicalIssues(name,year);
+      if(!items.length){
+        const fallback=renderUnverified(name);
+        return historicalNotices[name]?fallback.replace('尚未逐項核對此設備的歷史條文與函釋，暫不提供自動條號。',historicalNotices[name]):fallback;
+      }
+      const rows=[['pass','抽查符合','',''],...items].map(([id,label,article,note,fact])=>`<div class="issue-row"${!article&&id!=='pass'?' data-text-only="1"':''}><label class="issue-label"><input type="checkbox" data-issue="${id}"><span>${label}${article?' <span class="article">§'+article+'</span>':''}</span></label><p class="note">${note}</p><input class="detail" type="text" maxlength="350" aria-label="現場紀錄" ${fact?'data-fact-required="1"':''} placeholder="${fact?'必填：'+fact:'選填：缺失點'}"></div>`).join('');
+      return `<article class="inspection" data-equipment="${escapeHtml(name)}"><h3>${escapeHtml(name)}（${year}年版）</h3><div class="issue-grid">${rows}</div></article>`;
+    }
     function renderUnverified(name){return `<article class="inspection unverified" data-equipment="${escapeHtml(name)}"><h3>${escapeHtml(name)}</h3><p>尚未逐項核對此設備的歷史條文與函釋，暫不提供自動條號。</p><div class="issue-grid"><div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="manual"><span>待人工查核的缺失</span></label><input class="detail" type="text" maxlength="180" aria-label="${escapeHtml(name)}的具體缺失" placeholder="填寫實際缺失（必填）"></div></div></article>`;}
-    $('inspect').addEventListener('click',()=>{const selected=checkedEquipment();if(!selected.length){document.querySelector('#equipment-grid input').focus();return;}$('inspections').innerHTML=selected.map(name=>name==='滅火器'?renderExtinguisher($('year').value):name==='室內栓'?renderHydrant($('year').value):name==='室外栓'?renderOutdoor($('year').value):name==='撒水'?renderSprinkler($('year').value):name==='泡沫'?renderFoam($('year').value):name==='火自報'?renderFireAlarm($('year').value):name==='手報'?renderManualAlarm($('year').value):name==='廣播'?renderBroadcast($('year').value):name==='避難器具'?renderEvacuation($('year').value):name==='連結送水管'?renderLinkedStandpipe($('year').value):name==='排煙'?renderSmoke($('year').value):name==='標示'?renderSignage($('year').value):renderUnverified(name)).join('');$('issues-section').classList.remove('hidden');$('result-section').classList.add('hidden');setStep(3);$('issues-section').scrollIntoView({behavior:'smooth',block:'start'});});
+    $('inspect').addEventListener('click',()=>{const selected=checkedEquipment();if(!selected.length){document.querySelector('#equipment-grid input').focus();return;}$('inspections').innerHTML=selected.map(name=>name==='滅火器'?renderExtinguisher($('year').value):name==='室內栓'?renderHydrant($('year').value):name==='室外栓'?renderOutdoor($('year').value):name==='撒水'?renderSprinkler($('year').value):name==='泡沫'?renderFoam($('year').value):name==='火自報'?renderFireAlarm($('year').value):name==='手報'?renderManualAlarm($('year').value):name==='廣播'?renderBroadcast($('year').value):name==='避難器具'?renderEvacuation($('year').value):name==='連結送水管'?renderLinkedStandpipe($('year').value):name==='排煙'?renderSmoke($('year').value):name==='標示'?renderSignage($('year').value):name==='照明'?renderLighting($('year').value):name==='緊急發電機'?renderGenerator($('year').value):renderHistoricalEquipment(name,$('year').value)).join('');$('issues-section').classList.remove('hidden');$('result-section').classList.add('hidden');setStep(3);$('issues-section').scrollIntoView({behavior:'smooth',block:'start'});});
     $('inspections').addEventListener('change',event=>{const input=event.target;if(input.dataset.issue!=='pass'||!input.checked)return;input.closest('.inspection').querySelectorAll('input[type=checkbox]').forEach(other=>{if(other!==input)other.checked=false;});});
     $('inspections').addEventListener('change',event=>{const input=event.target;if(input.type!=='checkbox'||input.dataset.issue==='pass'||!input.checked)return;const pass=input.closest('.inspection').querySelector('[data-issue=pass]');if(pass)pass.checked=false;});
     // 撒水或泡沫輸入修改後隱藏舊草稿，避免複製上一輪勾選結果。
@@ -754,7 +978,30 @@
           outputRow=row;
           // 單純缺失點可留空；原有合併缺失與具體事實的必填檢核仍由各分支處理。
           if(row.querySelector('.actual-defect')&&!row.querySelector('.actual-defect').value.trim()){markIncomplete(row,`${name}：請寫明實際缺失。`);return;}
+          if(confirmedEquipmentIssues[name]&&issueId!=='manual'){
+            const issue=historicalIssues(name,year).find(i=>i[0]===issueId);
+            if(!issue||issue[4]&&!detail){markIncomplete(row,name+'：請填寫'+(issue?.[4]||'缺失'));return;}
+            lines.push(name+'：'+issue[1]+(detail?'（'+detail+'）':'')+(issue[2]?'，第'+issue[2]+'條':''));
+            return;
+          }
+          if(name==='緊急發電機'&&['85','93','102','107','110','113'].includes(year)){
+            const issue=generatorIssues(year).find(i=>i.id===issueId);
+            if(!issue||!detail){markIncomplete(row,'緊急發電機：請填寫現場事實及測試結果。');return;}
+            lines.push(name+'：'+issue.label+'（'+detail+'），第'+issue.article+'條'+(issue.clause||''));
+            review.push(issue.note);
+            return;
+          }
+          if(['標示設備','緊急照明設備'].includes(name)&&modernLampYears.includes(year)){
+            const issue=lampIssues(year,name==='緊急照明設備').find(i=>i.id===issueId);
+            if(!detail||(!issue&&issueId!=='other')){markIncomplete(row,name+'：請填寫現場事實並確認缺失。');return;}
+            const article=row.querySelector('.lamp-article')?.value||issue?.article;
+            if(issue?.articles&&!issue.articles.includes(article)){markIncomplete(row,name+'：請選擇實際引用條號。');return;}
+            lines.push(name+'：'+(issue?.label||'其他缺失')+'（'+detail+'）'+(article?'，第'+article+'條'+(issue?.clause||''):'（條號待查核）'));
+            if(issue?.note)review.push(issue.note);
+            return;
+          }
           if(name==='標示設備'&&year==='78'){
+
             const issue=signage78Issues.find(i=>i.id===issueId);
             if(!issue&&issueId!=='other'){markIncomplete(row,'標示設備：請重新選擇缺失。');return;}
             const index=row.querySelector('.fire-alarm-variant')?.value;
@@ -763,6 +1010,17 @@
             lines.push('標示設備：'+(variant||issue?.label||'其他缺失')+'（'+detail+'）'+(issue?'，第'+issue.article+'條'+issue.clause:'（條號待查核）'));
             if(issue?.note)review.push(issue.note);
             if(!issue)review.push('其他標示缺失須另核法源。');
+            return;
+          }
+          if(name==='緊急照明設備'&&year==='78'){
+            const issue=lighting78Issues.find(i=>i.id===issueId);
+            if(!issue&&issueId!=='other'){markIncomplete(row,'緊急照明設備：請重新選擇缺失。');return;}
+            const index=row.querySelector('.fire-alarm-variant')?.value;
+            const variant=index===undefined||index===''?null:issue?.variants?.[Number(index)];
+            if(!detail||(issue?.variants&&!variant)){markIncomplete(row,'緊急照明設備：請選擇實際缺失並填寫現場事實。');return;}
+            lines.push('緊急照明設備：'+(variant||issue?.label||'其他缺失')+'（'+detail+'）'+(issue?'，第'+issue.article+'條'+issue.clause:'（條號待查核）'));
+            if(issue?.note)review.push(issue.note);
+            if(!issue)review.push('其他緊急照明缺失須另核法源。');
             return;
           }
           if(name==='梯間排煙'&&['85','93','102','107','110','113'].includes(year)){
@@ -816,6 +1074,24 @@
             const variant=variantIndex===''||variantIndex===undefined?undefined:issue?.variants?.[Number(variantIndex)];
              if(issue?.variants&&!variant){markIncomplete(row,`${name}：${issue.article?`第${issue.article}條`:issue.label}請先選擇本次實際缺失類型。`);return;}
             if(!detail){markIncomplete(row,`${name}：${issue?.article?`第${issue.article}條`:issue?.label||'其他缺失'}請填寫實際缺失與位置。`);return;}
+            if(issue?.detectorType){
+              const state=row.querySelector('[data-detector="state"]').value;
+              if(!state){markIncomplete(row,`${name}：${issue.detectorType}請選擇故障、經測試不動作或遭拆除。`);return;}
+              lines.push(`${name}：${issue.detectorType}${state}（${detail}），第${issue.article}條`);
+              review.push(`${name}：${year}年探測器條號須核對實際型式、適用條款、核准圖說及相關函釋。`);
+              return;
+            }
+            const typeField=row.querySelector('[data-detector="type"]');
+            if(typeField){
+              const type=typeField.value,state=row.querySelector('[data-detector="state"]').value;
+              if(!type||!state){markIncomplete(row,name+'：請選擇探測器型式與缺失情形。');return;}
+              const clause=year==='78'&&issue.id==='detectorFault'?['第1款','第2款','第3款','第4款'][alarmDetectorTypes.legacy.indexOf(type)]:'';
+              const detectorName=type==='其他經認可型式'?row.querySelector('.detector-name').value.trim():type;
+              if(!detectorName){markIncomplete(row,'請填寫其他經認可探測器的實際器名。');return;}
+              if(type==='其他經認可型式')review.push('請確認實際器名及認可資料。');
+              lines.push(name+'：'+detectorName.replace(/探測器$/,'')+'探測器'+state+'（'+detail+'），第'+issue.article+'條'+clause);
+              return;
+            }
             const provisional=issue?.provisionalVariants?.includes(Number(variantIndex));
             lines.push(`${name}：${variant?`${variant}（${detail}）`:detail}${issue?.article?`，第${issue.article}條${provisional?'（暫定，正式開單條號待確認）':''}`:issue?.pending?'（條號待查核）':''}`);
             if(issue?.note)review.push(`${name}：${issue.note}`);
