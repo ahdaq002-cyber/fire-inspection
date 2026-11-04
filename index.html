@@ -62,7 +62,6 @@
       {id:'pipeValve',label:'管系無法持壓、閥件故障或關閉',article:(y,v)=>v==='pipe'&&y!=='78'?'32':v==='valve'?y==='78'?'29':y==='85'?'34':'32':null,review:true,specific:true,variants:[{id:'pipe',label:'管系無法持壓',from85:true},{id:'valve',label:'閥件故障或關閉'}]},
       {id:'pumpLamp',label:'幫浦啟動燈故障',article:y=>y==='78'?'30':'37',review:true},
       {id:'pumpRoom',label:'幫浦室防火區劃破壞或無防水措施',article:(y,v)=>v==='fire'&&y!=='78'?'37':v==='waterproof'&&!['78','85'].includes(y)?'37':null,review:true,specific:true,variants:[{id:'fire',label:'幫浦室防火區劃破壞',from85:true},{id:'waterproof',label:'幫浦室無防水措施'}]},
-      {id:'firefighterOutlet',label:y=>y==='78'?'消防栓箱未設消防人員專用出水口':'連結送水管出水口未設（原消防栓箱專用出水口項）',article:y=>y==='78'?'29':'180',review:true,specific:true},
       {id:'testOutlet',label:'測試用出水口故障',article:(y,v)=>y==='78'?v==='ground'?'31':v==='roof'?'32':null:'34',review:true,specific:true,variants:[{id:'ground',label:'地面層送水口故障'},{id:'roof',label:'十層以上建築物屋頂消防栓故障'}]},
       {id:'testSign',label:y=>y==='78'?'地面層送水口標示牌脫落或損壞':'測試用出水口標示牌脫落或損壞',article:y=>y==='78'?'31':'34',review:true},
       {id:'water',label:'水源容量不足',article:y=>y==='78'?'30':'36',review:true},
@@ -144,8 +143,8 @@
     }
     function sprinklerReference(article,year){return article==='47'&&year==='78'?'第47條（送水口設置依第31條）':article?`第${article}條`:'條號待查核';}
     // 使用者轉述的機關系統 110 年版欄位；僅供對照，不作為設置標準法源。
-    const systemArticles110={pipeValve:'32',pumpRoom:'37',firefighterOutlet:'37',testSign:'37',water:'37',diameter:'37'};
-    const systemArticles85Plus={firefighterOutlet:'37',water:'37'};
+    const systemArticles110={pipeValve:'32',pumpRoom:'37',testSign:'37',water:'37',diameter:'37'};
+    const systemArticles85Plus={water:'37'};
     const systemArticleFor=(year,issueId)=>year==='78'?null:(year==='110'?systemArticles110:systemArticles85Plus)[issueId]||null;
     const $=id=>document.getElementById(id);
     const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -178,7 +177,7 @@
       return `<article class="inspection" data-equipment="室內消防栓"><h3>室內消防栓</h3>
         <p>各項缺失獨立勾選，條號列於文字末尾；只選本次現場查得的缺失。</p>
         <div class="issue-grid">${[...groups].map(([key,choices])=>{const article=choices[0].articleNumber;const combined=choices.length>1;const label=choices.map(choice=>choice.label).join('、');const choice=choices[0];const systemArticle=!combined?systemArticleFor(year,choice.id):null;const systemLabel=systemArticle?` <span class="article review" title="使用者轉述的機關系統欄位，非官方法源">機關系統顯示§${systemArticle}</span>`:'';const articleLabel=article?` <span class="article">第${article}條</span>`:choice.pass||choice.noArticle?'':` <span class="article review">條號待查</span>`;const placeholder=combined?'必填：寫明實際缺失，不要照抄全部選項':choice.specific?'必填：請寫明實際故障部位或測值':'實際查得情形（選填）';return `<div class="issue-row"><label class="issue-label"><input type="checkbox" data-issue="${combined?key:choice.id}" data-variant="${combined?'':choice.variant}"${combined?` data-group-article="${article}"`:''}><span>${escapeHtml(label)}${articleLabel}${systemLabel}${choices.some(item=>item.review)?'<span class="article review" title="正式開單前須人工確認">＊</span>':''}</span></label>${choice.pass?'<input class="detail" type="text" inputmode="decimal" maxlength="20" aria-label="測試放水壓力" placeholder="測試放水壓力（kgf/cm²，選填）">':`<input class="detail" type="text" maxlength="250" aria-label="${escapeHtml(label)}的具體事實" placeholder="${escapeHtml(placeholder)}">`}</div>`;}).join('')}</div>
-        <p class="note" style="margin-top:12px">＊ 水帶製造超過 10 年不當然違反第29條或第34條；本項限已查明箱內水帶、配件不足或損壞，並寫明實物與功能。78年消防栓箱開啟障礙列第28條，但「箱門未達90度」不是條文明定門檻，須記錄實際妨礙取用情形；當版不提供管系無法持壓、幫浦室防火區劃破壞的自動條號選項。78年閥件故障列第29條、85年列第34條，須核對故障閥件是否屬該條規範的栓箱設備。85年至113年的第180條屬連結送水管出水口，須先確認應設條件、位置與核准圖說，不能只憑室內消防栓箱未設出水口認定。78年第31條為地面層送水口，第32條為十層以上建築物屋頂消防栓；屋頂出水口標示不自動附條號。自行填寫的其他缺失不自動附條號。</p>
+        <p class="note" style="margin-top:12px">＊ 水帶製造超過 10 年不當然違反第29條或第34條；本項限已查明箱內水帶、配件不足或損壞，並寫明實物與功能。78年消防栓箱開啟障礙列第28條，但「箱門未達90度」不是條文明定門檻，須記錄實際妨礙取用情形；當版不提供管系無法持壓、幫浦室防火區劃破壞的自動條號選項。78年閥件故障列第29條、85年列第34條，須核對故障閥件是否屬該條規範的栓箱設備。78年第31條為地面層送水口，第32條為十層以上建築物屋頂消防栓；屋頂出水口標示不自動附條號。自行填寫的其他缺失不自動附條號。</p>
         <div class="followup-field"><label class="field-label" for="hydrant-followup">複查位置備註（不列入違規內容）</label><textarea class="followup-input" id="hydrant-followup" maxlength="500" placeholder="例如：3 樓東側室內消防栓箱、設備編號 H-03。"></textarea><p class="note">此欄只供複查定位；可與滅火器備註一併單獨複製。</p></div></article>`;
     }
     function renderOutdoor(year){
